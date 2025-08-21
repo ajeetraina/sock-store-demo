@@ -82,127 +82,105 @@ This demo includes four production-ready interceptors:
 
 **Example:** Replaces "adidas socks" with "[COMPETITOR_NAME] socks"
 
-## 🛠️ Quick Start
+## 🛠️ Super Quick Start
 
-### Prerequisites
-- Docker Desktop 4.43.0+ with MCP Toolkit enabled
-- OpenAI API key (recommended) OR sufficient VRAM for local models
-
-### 1. Setup Environment
+### One-Click Setup (Recommended)
 ```bash
 git clone https://github.com/ajeetraina/sock-store-demo
 cd sock-store-demo
 git checkout interceptor-demo
 
-# Set up secrets (replace with your actual keys)
-export BRAVE_API_KEY=<your_brave_api_key>
-export RESEND_API_KEY=<resend_api_key>  
-export OPENAI_API_KEY=<openai_api_key>
-make gateway-secrets
-```
+# Automatic setup - works on any system!
+chmod +x quick-fix.sh
+./quick-fix.sh
 
-### 2. Choose Your AI Model
-
-#### Option A: OpenAI API (Recommended - No VRAM needed)
-```bash
-# Default configuration uses OpenAI GPT-4o-mini
-docker compose up --build -d
-```
-
-#### Option B: Smaller Local Model (Requires ~2GB VRAM)
-```bash
-# Use Phi3-mini instead of large Qwen3 model
-docker compose -f compose.yaml -f compose.local-model.yaml up --build -d
-```
-
-### 3. Run the Interceptor Demo
-```bash
-# Make the demo script executable
-chmod +x demo-interceptors.sh
-
-# Run the comprehensive demo
+# Run the demo
 ./demo-interceptors.sh
 ```
 
-### 4. Access the Dashboards
-- **Sock Store:** http://localhost:9090
-- **Agent Portal:** http://localhost:3000  
-- **Interceptor Dashboard:** http://localhost:8090
+The quick-fix script will:
+- ✅ Detect your system capabilities (VRAM, memory)
+- ✅ Choose optimal model (OpenAI API, TinyLlama, or Phi3-mini)
+- ✅ Fix common configuration issues
+- ✅ Start services with appropriate settings
 
-## 🚨 Troubleshooting
+### Prerequisites
+- Docker Desktop 4.43.0+ with MCP Toolkit enabled
+- **ONE** of the following:
+  - **OpenAI API key** (recommended - 0MB VRAM needed)
+  - **700MB+ VRAM** for ultra-lightweight TinyLlama
+  - **2GB+ VRAM** for good performance Phi3-mini
 
-### "Model Too Big" Error
-If you see `unable to load runner: model too big`:
+## 🤖 Model Options (All Lightweight!)
 
-1. **Use OpenAI API (recommended):**
-   ```bash
-   # Restart with default configuration
-   docker compose down
-   docker compose up --build -d
-   ```
-
-2. **Use smaller local model:**
-   ```bash
-   # Use Phi3-mini (only 2GB VRAM needed)
-   docker compose down
-   docker compose -f compose.yaml -f compose.local-model.yaml up --build -d
-   ```
-
-3. **Check system resources:**
-   ```bash
-   # On systems with GPU
-   nvidia-smi  # Check VRAM usage
-   docker system df  # Check Docker disk usage
-   ```
-
-### UI Content Errors
-If the Agent Portal shows errors:
+### 🌟 OpenAI API (Best - 0MB VRAM)
 ```bash
-# Check ADK service logs
-docker compose logs adk
-
-# Restart if needed
-docker compose restart adk adk-ui
+export OPENAI_API_KEY=sk-your-key
+./quick-fix.sh
 ```
 
-### Missing Interceptor Logs
-If interceptor logs aren't appearing:
+### 🔬 TinyLlama (Ultra-lightweight - 700MB)
 ```bash
-# Check if interceptors are mounted correctly
-docker compose exec mcp-gateway ls -la /interceptors/
-
-# Verify log directory
-docker compose exec mcp-gateway ls -la /var/log/
-
-# Try making a test request to generate logs
+docker compose -f compose.yaml -f compose.tinyllama.yaml up --build -d
 ```
+
+### ⚡ Phi3-mini (Good performance - 2GB)
+```bash
+docker compose -f compose.yaml -f compose.local-model.yaml up --build -d
+```
+
+### 🧭 Interactive Selection
+```bash
+./select-model.sh  # See all options with system recommendations
+```
+
+**For complete model guide:** See [LIGHTWEIGHT_MODELS.md](./LIGHTWEIGHT_MODELS.md)
 
 ## 📋 Testing Scenarios
 
-### Scenario 1: Secret Leakage Prevention
-Try submitting a vendor description containing an API key:
-```
-"Our API integration uses key sk-1234567890abcdef for authentication"
-```
+### Scenario 1: Secret Leakage Prevention ⛔
+Try submitting: `"Our API integration uses key sk-1234567890abcdef for authentication"`  
 **Expected:** Request blocked by secret detector
 
-### Scenario 2: Business Rule Enforcement  
-Submit a low-price product:
-```
-"Discount socks for only $2.99 each"
-```
+### Scenario 2: Business Rule Enforcement 💰
+Submit: `"Discount socks for only $2.99 each"`  
 **Expected:** Rejected for being below $5.00 minimum
 
-### Scenario 3: Content Filtering
-Submit text mentioning competitors:
-```
-"These are better than adidas and nike products"
-```
+### Scenario 3: Content Filtering 🏢
+Submit: `"These are better than adidas and nike products"`  
 **Expected:** Competitor names replaced with [COMPETITOR_NAME]
 
-### Scenario 4: Rate Limiting
-Submit 25+ rapid requests to the same tool
+### Scenario 4: Rate Limiting 📊
+Submit 25+ rapid requests to the same tool  
 **Expected:** Rate limiting warnings in logs
+
+## 📊 Access Points
+
+- **🛡️ Interceptor Dashboard:** http://localhost:8090 (real-time monitoring)
+- **🛒 Sock Store:** http://localhost:9090 (demo application)
+- **🤖 Agent Portal:** http://localhost:3000 (submit vendor requests)
+
+## 🚨 Troubleshooting
+
+### "Model Too Big" Error?
+```bash
+./quick-fix.sh  # Automatic fix
+# OR manually use tiny model:
+docker compose -f compose.yaml -f compose.tinyllama.yaml up -d
+```
+
+### UI Errors?
+```bash
+docker compose restart adk adk-ui
+```
+
+### No Interceptor Logs?
+```bash
+# Try submitting a request via Agent Portal to generate logs
+# Check: docker compose exec mcp-gateway tail -f /var/log/mcp-interceptors.log
+```
+
+**Complete troubleshooting:** [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 
 ## 📊 Monitoring & Observability
 
@@ -253,31 +231,6 @@ command:
 - **type:** Currently supports `exec` (executable scripts)
 - **path:** Absolute path to interceptor script
 
-### Environment Variables
-Interceptors have access to:
-- `HTTP_USER_AGENT` - Client identification
-- `SESSION_ID` - Session tracking (if set)
-- Standard input contains the tool call/response data
-
-## 🏭 Production Deployment
-
-### Security Considerations
-- Interceptor scripts run with gateway container privileges
-- Use read-only mounts for interceptor files
-- Implement proper error handling and logging
-- Consider resource limits for interceptor execution
-
-### Performance Optimization  
-- Keep interceptor logic lightweight and fast
-- Use asynchronous logging where possible
-- Implement caching for repeated validations
-- Monitor interceptor execution time
-
-### Scaling Patterns
-- Interceptors scale with gateway instances
-- Shared state can be maintained via external stores
-- Consider circuit breakers for external validations
-
 ## 🎓 Learning Outcomes
 
 After running this demo, you'll understand:
@@ -304,11 +257,12 @@ After running this demo, you'll understand:
 - Complete audit trail of all activities  
 - Guaranteed compliance with organizational policies
 
-## 🔗 Related Resources
+## 📚 Additional Resources
 
-- [Docker MCP Gateway Documentation](https://github.com/docker/mcp-gateway)
-- [MCP Toolkit User Guide](https://docs.docker.com/mcp/)
-- [Enterprise AI Security Best Practices](https://www.docker.com/blog/ai-security-best-practices/)
+- **[LIGHTWEIGHT_MODELS.md](./LIGHTWEIGHT_MODELS.md)** - Complete model guide
+- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Detailed troubleshooting
+- **[Docker MCP Gateway](https://github.com/docker/mcp-gateway)** - Main project
+- **[MCP Toolkit Docs](https://docs.docker.com/mcp/)** - Official documentation
 
 ## 🤝 Contributing
 
@@ -322,4 +276,4 @@ Have ideas for new interceptors? Found bugs? Want to improve the demo?
 
 ---
 
-**This demo showcases how Docker MCP Gateway interceptors transform AI tool integration from a security risk into a competitive advantage through enterprise-grade protection, monitoring, and control.**
+**This demo showcases how Docker MCP Gateway interceptors transform AI tool integration from a security risk into a competitive advantage through enterprise-grade protection, monitoring, and control - all while working on any system from laptops to enterprise servers!** 🚀
