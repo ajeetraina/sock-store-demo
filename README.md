@@ -11,104 +11,145 @@
 ### Requirements
 
 + **[Docker Desktop] 4.43.0+ or [Docker Engine]** installed.
-+ **OpenAI API key** (recommended) OR **A laptop or workstation with a GPU** (e.g., a MacBook) for running open models locally. If you
-  don't have a GPU, you can alternatively use **[Docker Offload]**.
-+ If you're using [Docker Engine] on Linux or [Docker Desktop] on Windows, ensure that the
-  [Docker Model Runner requirements] are met (specifically that GPU
-  support is enabled) and the necessary drivers are installed.
-+ If you're using Docker Engine on Linux, ensure you have [Docker Compose] 2.38.1 or later installed.
++ **ONE** of the following:
+  - **OpenAI API key** (recommended - no local resources needed)
+  - **700MB+ VRAM** for ultra-lightweight models
+  - **2GB+ VRAM** for good performance local models
 
-### Run the project
-
-Some of the MCP servers used here require Secrets. Set the Brave and Reset api keys and then set the secrets for the gateway.
-
-```sh
-export BRAVE_API_KEY=<your_brave_api_key>
-export RESEND_API_KEY=<resend_api_key>
-export OPENAI_API_KEY=<openai_api_key>
-make gateway-secrets
-```
-
-If you're running with an arm64 macos machine, then initialize the environment with one additional command:
-
-```sh
-DOCKER_DEFAULT_PLATFORM=linux/amd64 docker pull roberthouse224/catalogue
-```
-
-To start up the Sock Store and the Agent portal, run:
-
-```sh
-docker compose up --build
-```
-
-+ Open [*http://localhost:9090*](http://localhost:9090) to see the sock store.
-+ Open [*http://localhost:3000*](http://localhost:3000) to see the Sock Vendor Agent Portal.
-
-# 🛡️ Interceptor Demo
-
-For a comprehensive demonstration of Docker MCP Gateway's interceptor framework providing enterprise-grade security and compliance:
+### Super Quick Start (Recommended)
 
 ```sh
 git checkout interceptor-demo
-```
 
-## Quick Start (Recommended)
-
-If you experience any "model too big" errors or startup issues:
-
-```sh
-# Run the automatic fix script
+# Automatic setup - detects your system and chooses best model
 chmod +x quick-fix.sh
 ./quick-fix.sh
-```
-
-This script will:
-- ✅ Detect your system capabilities
-- ✅ Choose optimal configuration (OpenAI API vs local model)
-- ✅ Fix common permission and configuration issues
-- ✅ Start services with appropriate settings
-
-## Manual Setup
-
-```sh
-# Set up environment
-export BRAVE_API_KEY=<your_key>
-export RESEND_API_KEY=<your_key>
-export OPENAI_API_KEY=<your_key>
-make gateway-secrets
-
-# Option A: Use OpenAI API (recommended - no VRAM needed)
-docker compose up --build -d
-
-# Option B: Use smaller local model (requires ~2GB VRAM)
-docker compose -f compose.yaml -f compose.local-model.yaml up --build -d
 
 # Run the interceptor demo
 ./demo-interceptors.sh
 ```
 
-## What You'll See
+**That's it!** The quick-fix script will automatically:
+- ✅ Detect your system capabilities (VRAM, memory)
+- ✅ Choose the optimal model configuration
+- ✅ Fix common issues automatically
+- ✅ Start the services with appropriate settings
+
+## 🤖 Model Options (All Lightweight!)
+
+Don't have powerful hardware? No problem! We support ultra-lightweight models:
+
+### 1. 🌟 OpenAI API (Recommended)
+```sh
+export OPENAI_API_KEY=sk-your-key
+./quick-fix.sh
+```
+- **VRAM needed:** 0MB
+- **Cost:** ~$0.50-2.00 per session
+- **Performance:** Excellent
+
+### 2. 🔬 TinyLlama (Ultra-lightweight)
+```sh
+docker compose -f compose.yaml -f compose.tinyllama.yaml up --build -d
+```
+- **VRAM needed:** 700MB (works on most laptops!)
+- **Download:** 700MB
+- **Performance:** Basic but functional
+
+### 3. ⚡ Phi3-mini (Good performance)
+```sh
+docker compose -f compose.yaml -f compose.local-model.yaml up --build -d
+```
+- **VRAM needed:** 2GB
+- **Download:** 2.3GB
+- **Performance:** Good
+
+### 4. 🧭 Let the system choose for you
+```sh
+./select-model.sh  # Interactive model selection
+```
+
+## Manual Setup (If you prefer to do it yourself)
+
+```sh
+# Set up secrets
+export BRAVE_API_KEY=<your_brave_api_key>
+export RESEND_API_KEY=<resend_api_key>
+export OPENAI_API_KEY=<openai_api_key>  # Optional but recommended
+make gateway-secrets
+
+# Choose ONE of these startup options:
+
+# Option A: OpenAI API (0MB VRAM needed)
+echo "sk-your-openai-key" > secret.openai-api-key
+docker compose up --build -d
+
+# Option B: Ultra-lightweight TinyLlama (700MB VRAM)
+docker compose -f compose.yaml -f compose.tinyllama.yaml up --build -d
+
+# Option C: Good performance Phi3-mini (2GB VRAM)
+docker compose -f compose.yaml -f compose.local-model.yaml up --build -d
+
+# Option D: Custom model selection
+# Edit compose.lightweight-models.yaml to uncomment your preferred model
+docker compose -f compose.yaml -f compose.lightweight-models.yaml up --build -d
+```
+
+For ARM64 macOS users:
+```sh
+DOCKER_DEFAULT_PLATFORM=linux/amd64 docker pull roberthouse224/catalogue
+```
+
+## 🛡️ Interceptor Demo Features
 
 The interceptor demo showcases:
-- **🔒 Secret Detection:** Prevents API key leakage
-- **📊 Tool Monitoring:** Usage tracking and rate limiting  
-- **🏪 Business Logic:** Domain-specific rule enforcement
-- **🧹 Content Filtering:** Output sanitization and brand compliance
+- **🔒 Secret Detection:** Prevents API key leakage - try submitting "api_key=sk-123..."
+- **📊 Tool Monitoring:** Usage tracking and rate limiting - make 25+ rapid requests
+- **🏪 Business Logic:** Domain-specific rule enforcement - try price under $5.00
+- **🧹 Content Filtering:** Output sanitization - mention "adidas" and see it filtered
 
-## Access Points
+## 🌐 Access Points
 
-- **🛡️ Interceptor Dashboard:** http://localhost:8090
-- **🛒 Sock Store:** http://localhost:9090
-- **🤖 Agent Portal:** http://localhost:3000
+- **🛡️ Interceptor Dashboard:** http://localhost:8090 (real-time security monitoring)
+- **🛒 Sock Store:** http://localhost:9090 (the demo store)
+- **🤖 Agent Portal:** http://localhost:3000 (submit vendor requests here!)
 
-## Troubleshooting
+## 🆘 Troubleshooting
 
-- **Model too big error?** Run `./quick-fix.sh` or use OpenAI API
-- **UI errors?** Restart with `docker compose restart adk adk-ui`
-- **Missing logs?** Try submitting a request via the Agent Portal
-- **Need help?** See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
+### "Model Too Big" Error?
+```sh
+# Try the automatic fix first
+./quick-fix.sh
 
-For complete documentation: [INTERCEPTOR_DEMO.md](./INTERCEPTOR_DEMO.md)
+# Or manually use the tiniest model
+docker compose -f compose.yaml -f compose.tinyllama.yaml up --build -d
+```
+
+### UI Content Errors?
+```sh
+docker compose restart adk adk-ui
+```
+
+### Want to see all model options?
+```sh
+./select-model.sh
+```
+
+### Still having issues?
+- See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for detailed help
+- Check service health: `docker compose ps`
+- View logs: `docker compose logs adk`
+
+## 📊 Model Comparison
+
+| Model          | VRAM    | Download | Performance | Best For           |
+|----------------|---------|----------|-------------|--------------------|
+| **OpenAI API** | **0MB** | **0MB**  | **Excellent** | **Production use** |
+| TinyLlama      | 700MB   | 700MB    | Basic       | Minimal systems    |
+| Phi3-mini      | 2GB     | 2.3GB    | Good        | Most laptops       |
+| Gemma 2B       | 1.5GB   | 1.6GB    | Fair        | Mid-range systems  |
+| Llama 3.2 3B   | 2GB     | 2.0GB    | Good        | Balanced choice    |
+| Mistral 7B     | 4GB     | 4.1GB    | Very Good   | High-end systems   |
 
 # ❓ What Can It Do?
 
@@ -125,10 +166,14 @@ With interceptors enabled, this submission will:
 3. 🏪 Pass business rule validation (price above $5.00 minimum - ✅ valid)
 4. 🧹 Have any competitor mentions filtered in the response
 
+Try these test scenarios:
+- 🔒 **Secret detection:** "Our API key is sk-1234567890abcdef" (gets blocked!)
+- 💰 **Business rules:** "Cheap socks for $2.99" (gets rejected!)
+- 🏢 **Content filter:** "Better than adidas products" (gets filtered!)
+
 # 🔧 Architecture Overview
 
 ```mermaid
-
 flowchart TD
     input[📝 Supplier] --> supplier_intake[🧑‍⚖️ Supplier Intake Sequential Agent]
     supplier_intake --> reddit_research[🧠 Reddit Research]
@@ -148,7 +193,7 @@ flowchart TD
 
 | **Agent**   | **Tools Used**        | **Role Description**                                                         |
 | ----------- | --------------------- | ---------------------------------------------------------------------------- |
-| **Supplier Intake**  |  None                | Resesarches a new sock vendor and decides whether to onboard them to the store |
+| **Supplier Intake**  |  None                | Researches a new sock vendor and decides whether to onboard them to the store |
 | **Reddit Research**  |  BraveSearch via MCP | Searches for reviews on the vendor                             |
 | **Customer Review**  |  MongoDB via MCP     | Match styles against historical buyer data to see if it's a match for the store |
 | **Catalog**          |  curl via MCP        | Adds the product sku to the catalog if we like the product |
