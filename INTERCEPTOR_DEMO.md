@@ -86,7 +86,7 @@ This demo includes four production-ready interceptors:
 
 ### Prerequisites
 - Docker Desktop 4.43.0+ with MCP Toolkit enabled
-- API keys for Brave Search and Resend (see main README)
+- OpenAI API key (recommended) OR sufficient VRAM for local models
 
 ### 1. Setup Environment
 ```bash
@@ -101,13 +101,18 @@ export OPENAI_API_KEY=<openai_api_key>
 make gateway-secrets
 ```
 
-### 2. Start the Enhanced Stack
-```bash
-# Start with interceptor-enabled gateway
-docker compose up --build -d
+### 2. Choose Your AI Model
 
-# Wait for services to initialize
-sleep 30
+#### Option A: OpenAI API (Recommended - No VRAM needed)
+```bash
+# Default configuration uses OpenAI GPT-4o-mini
+docker compose up --build -d
+```
+
+#### Option B: Smaller Local Model (Requires ~2GB VRAM)
+```bash
+# Use Phi3-mini instead of large Qwen3 model
+docker compose -f compose.yaml -f compose.local-model.yaml up --build -d
 ```
 
 ### 3. Run the Interceptor Demo
@@ -123,6 +128,54 @@ chmod +x demo-interceptors.sh
 - **Sock Store:** http://localhost:9090
 - **Agent Portal:** http://localhost:3000  
 - **Interceptor Dashboard:** http://localhost:8090
+
+## 🚨 Troubleshooting
+
+### "Model Too Big" Error
+If you see `unable to load runner: model too big`:
+
+1. **Use OpenAI API (recommended):**
+   ```bash
+   # Restart with default configuration
+   docker compose down
+   docker compose up --build -d
+   ```
+
+2. **Use smaller local model:**
+   ```bash
+   # Use Phi3-mini (only 2GB VRAM needed)
+   docker compose down
+   docker compose -f compose.yaml -f compose.local-model.yaml up --build -d
+   ```
+
+3. **Check system resources:**
+   ```bash
+   # On systems with GPU
+   nvidia-smi  # Check VRAM usage
+   docker system df  # Check Docker disk usage
+   ```
+
+### UI Content Errors
+If the Agent Portal shows errors:
+```bash
+# Check ADK service logs
+docker compose logs adk
+
+# Restart if needed
+docker compose restart adk adk-ui
+```
+
+### Missing Interceptor Logs
+If interceptor logs aren't appearing:
+```bash
+# Check if interceptors are mounted correctly
+docker compose exec mcp-gateway ls -la /interceptors/
+
+# Verify log directory
+docker compose exec mcp-gateway ls -la /var/log/
+
+# Try making a test request to generate logs
+```
 
 ## 📋 Testing Scenarios
 
