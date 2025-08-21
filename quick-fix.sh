@@ -32,6 +32,20 @@ print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
+# Function to detect available VRAM
+detect_vram() {
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        vram=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1)
+        echo $((vram))
+    elif [ "$(uname)" = "Darwin" ]; then
+        # macOS - estimate based on total memory (unified memory)
+        total_mem=$(sysctl -n hw.memsize)
+        echo $(( total_mem / 1024 / 1024 / 4 ))
+    else
+        echo "2000"  # Conservative estimate
+    fi
+}
+
 # Check if we're in the right directory
 if [ ! -f "compose.yaml" ]; then
     print_error "compose.yaml not found. Please run this script from the sock-store-demo directory."
@@ -51,9 +65,10 @@ docker compose down -v 2>/dev/null || true
 print_step "Cleaning up Docker resources..."
 docker system prune -f >/dev/null 2>&1 || true
 
-print_step "Making interceptor scripts executable..."
+print_step "Making scripts executable..."
 chmod +x interceptors/*.sh 2>/dev/null || true
 chmod +x demo-interceptors.sh 2>/dev/null || true
+chmod +x select-model.sh 2>/dev/null || true
 
 print_step "Checking for required API keys..."
 
@@ -63,10 +78,7 @@ if [ ! -f "secret.openai-api-key" ] || [ ! -s "secret.openai-api-key" ]; then
         echo "$OPENAI_API_KEY" > secret.openai-api-key
         print_success "Created OpenAI API key file from environment variable"
     else
-        print_warning "OpenAI API key not found. Please set OPENAI_API_KEY environment variable"
-        echo "Example: export OPENAI_API_KEY=sk-your-key-here"
-        echo "Then run: echo \$OPENAI_API_KEY > secret.openai-api-key"
-        echo
+        print_warning "OpenAI API key not found. Will use local model."
     fi
 fi
 
@@ -90,29 +102,29 @@ if [ ! -f ".mcp.env" ] || [ ! -s ".mcp.env" ]; then
     fi
 fi
 
-print_step "Choosing optimal configuration..."
+print_step "Selecting optimal model configuration..."
 
-# Check available memory (rough estimate)
-available_memory=$(docker system info 2>/dev/null | grep "Total Memory" | awk '{print $3}' || echo "0")
-memory_gb=$(echo "$available_memory" | sed 's/GiB//' | sed 's/MB//' | cut -d'.' -f1)
+# Detect system capabilities
+vram_mb=$(detect_vram)
+echo "💾 Detected VRAM: ${vram_mb}MB"
 
-echo "Detected system memory: ${available_memory}"
-
-# Determine best configuration
+# Choose best configuration
 if [ -f "secret.openai-api-key" ] && [ -s "secret.openai-api-key" ]; then
     print_success "Using OpenAI API configuration (recommended)"
     compose_files="compose.yaml"
     config_description="OpenAI GPT-4o-mini (no local VRAM needed)"
-elif [ "$memory_gb" -gt 8 ]; then
-    print_warning "Using small local model configuration"
+elif [ "$vram_mb" -ge 2000 ]; then
+    print_success "Using Phi3-mini local model"
     compose_files="compose.yaml -f compose.local-model.yaml"
     config_description="Phi3-mini local model (~2GB VRAM needed)"
+elif [ "$vram_mb" -ge 700 ]; then
+    print_warning "Using TinyLlama ultra-lightweight model"
+    compose_files="compose.yaml -f compose.tinyllama.yaml"
+    config_description="TinyLlama local model (~700MB VRAM needed)"
 else
-    print_error "Insufficient resources for local model and no OpenAI API key found"
-    echo "Please either:"
-    echo "1. Set up OpenAI API key: echo 'sk-your-key' > secret.openai-api-key"
-    echo "2. Use a system with more memory/VRAM"
-    exit 1
+    print_error "Insufficient resources detected. Trying TinyLlama anyway..."
+    compose_files="compose.yaml -f compose.tinyllama.yaml"
+    config_description="TinyLlama local model (minimal resources)"
 fi
 
 print_step "Starting services with: $config_description"
@@ -123,13 +135,27 @@ echo
 if docker compose $compose_files up --build -d; then
     print_success "Services started successfully!"
 else
-    print_error "Failed to start services. Check the logs:"
-    echo "docker compose logs"
-    exit 1
+    print_error "Failed to start services. Trying with minimal configuration..."
+    print_step "Attempting fallback to OpenAI API configuration..."
+    
+    # Create a minimal OpenAI key if none exists
+    if [ ! -f "secret.openai-api-key" ]; then
+        echo "# Add your OpenAI API key here" > secret.openai-api-key
+        print_warning "Created placeholder OpenAI key file. Add your key: echo 'sk-your-key' > secret.openai-api-key"
+    fi
+    
+    # Try with basic configuration
+    if docker compose up --build -d; then
+        print_success "Fallback configuration started!"
+    else
+        print_error "Still failing. Check the logs:"
+        echo "docker compose logs"
+        exit 1
+    fi
 fi
 
 print_step "Waiting for services to initialize..."
-sleep 15
+sleep 20
 
 # Check service health
 print_step "Checking service health..."
@@ -141,7 +167,24 @@ else
     print_warning "Some services may need more time to start:"
     echo "$unhealthy"
     echo
-    echo "This is often normal - give them a few more minutes"
+    echo "Common issues and solutions:"
+    
+    # Check for model issues
+    if docker compose logs adk 2>/dev/null | grep -q "model too big"; then
+        echo "🔧 Model too big: Try a smaller model"
+        echo "   ./select-model.sh  # See all lightweight options"
+        echo "   # Or use TinyLlama: docker compose -f compose.yaml -f compose.tinyllama.yaml up -d"
+    fi
+    
+    # Check for API key issues
+    if docker compose logs adk 2>/dev/null | grep -q "401\|Unauthorized\|API key"; then
+        echo "🔑 API key issue: Set your OpenAI key"
+        echo "   echo 'sk-your-key-here' > secret.openai-api-key"
+        echo "   docker compose restart adk"
+    fi
+    
+    echo
+    echo "Give services a few more minutes to fully initialize..."
 fi
 
 print_step "Verifying interceptor setup..."
@@ -152,13 +195,6 @@ if docker compose exec mcp-gateway ls /interceptors/ >/dev/null 2>&1; then
     print_success "Interceptors mounted successfully ($interceptor_count scripts found)"
 else
     print_warning "Interceptor mount may have issues"
-fi
-
-# Check if log directory exists
-if docker compose exec mcp-gateway ls /var/log/ >/dev/null 2>&1; then
-    print_success "Log directory is accessible"
-else
-    print_warning "Log directory mount may have issues"
 fi
 
 echo
@@ -178,16 +214,16 @@ echo "2. Test the Agent Portal:"
 echo "   Visit http://localhost:3000"
 echo "   Submit: 'Nike compression socks for \$12.99'"
 echo
-echo "3. Monitor interceptor logs:"
-echo "   docker compose exec mcp-gateway tail -f /var/log/mcp-interceptors.log"
+echo "3. Try different models:"
+echo "   ./select-model.sh  # Interactive model selection"
 
 echo
-print_success "Quick fix completed! The interceptor demo should now be working."
+echo "💡 If you still have issues:"
+echo "============================"
+echo "1. Check service logs: docker compose logs adk"
+echo "2. Try TinyLlama: docker compose -f compose.yaml -f compose.tinyllama.yaml up -d"
+echo "3. Use OpenAI API: echo 'sk-your-key' > secret.openai-api-key && docker compose up -d"
+echo "4. See TROUBLESHOOTING.md for detailed help"
 
 echo
-echo "💡 Troubleshooting Tips"
-echo "======================"
-echo "- If services are still starting: wait 2-3 minutes and check 'docker compose ps'"
-echo "- If Agent Portal errors: restart with 'docker compose restart adk adk-ui'"
-echo "- If interceptor logs are empty: try submitting a request via the Agent Portal"
-echo "- For detailed troubleshooting: see TROUBLESHOOTING.md"
+print_success "Quick fix completed! Your interceptor demo should be working with an appropriate model for your system."
