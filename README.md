@@ -3,6 +3,9 @@
 > [!Tip]
 > ✨ No configuration needed — run it with a single command.
 
+> [!Important]
+> 🛡️ **NEW: Docker MCP Gateway Interceptor Demo** - Check out the `interceptor-demo` branch to see enterprise-grade security, compliance, and business logic enforcement in action! See [INTERCEPTOR_DEMO.md](./INTERCEPTOR_DEMO.md) for details.
+
 # 🚀 Getting Started
 
 ### Requirements
@@ -41,11 +44,28 @@ docker compose up --build
 + Open [*http://localhost:9090*](http://localhost:9090) to see the sock store.
 + Open [*http://localhost:3000*](http://localhost:3000) to see the Sock Vendor Agent Portal.
 
+# 🛡️ Interceptor Demo
+
+For a comprehensive demonstration of Docker MCP Gateway's interceptor framework providing enterprise-grade security and compliance:
+
+```sh
+git checkout interceptor-demo
+./demo-interceptors.sh
+```
+
+The interceptor demo showcases:
+- **🔒 Secret Detection:** Prevents API key leakage
+- **📊 Tool Monitoring:** Usage tracking and rate limiting  
+- **🏪 Business Logic:** Domain-specific rule enforcement
+- **🧹 Content Filtering:** Output sanitization and brand compliance
+
+See [INTERCEPTOR_DEMO.md](./INTERCEPTOR_DEMO.md) for complete documentation.
+
 # ❓ What Can It Do?
 
 Example input to the portal:
 
-> “I am a sock vendor named Nike. Perhaps you've heard of us. We provide colorful compressions socks,
+> "I am a sock vendor named Nike. Perhaps you've heard of us. We provide colorful compressions socks,
 > that are elegant and affordable.  Our Nike compression socks are 12.99 each.  
 > Here are some urls to images of the socks <https://tinyurl.com/5n6spnvu> and
 > <https://tinyurl.com/mv8ebjnh>"
@@ -84,6 +104,7 @@ docker compose down -v
 
 + [ADK]
 + [Docker Compose]
++ [Docker MCP Gateway](https://github.com/docker/mcp-gateway)
 
 [ADK]: https://google.github.io/adk-docs/
 [Docker Compose]: https://github.com/docker/compose
