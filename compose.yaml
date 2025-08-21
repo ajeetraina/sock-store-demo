@@ -88,24 +88,48 @@ services:
         endpoint_var: MODEL_RUNNER_URL
         model_var: MODEL_RUNNER_MODEL
 
+  # MCP Gateway with Interceptors Demo
   mcp-gateway:
-    # mcp-gateway secures your MCP servers
+    # mcp-gateway secures your MCP servers with interceptor framework
     image: docker/mcp-gateway:latest
     ports:
       - 8811:8811
+      - 8812:8812  # Additional port for interceptor monitoring
     use_api_socket: true
+    volumes:
+      # Mount interceptor scripts
+      - ./interceptors:/interceptors:ro
+      # Mount log directory for interceptor logs
+      - mcp_logs:/var/log
     command:
       - --transport=sse
       - --servers=fetch,brave,resend,curl,mongodb
       - --config=/mcp_config
       - --secrets=docker-desktop:/run/secrets/mcp_secret
+      # Interceptor configuration - demonstrating security and business logic layers
+      - --interceptor=before:exec:/interceptors/secret_detector.sh
+      - --interceptor=before:exec:/interceptors/tool_monitor.sh
+      - --interceptor=before:exec:/interceptors/sock_store_business.sh
+      - --interceptor=after:exec:/interceptors/content_filter.sh
       - --verbose
+      - --log-calls
     configs:
       - mcp_config
     secrets:
       - mcp_secret
     depends_on:
       - mongodb
+
+  # Interceptor Dashboard (Optional - for monitoring)
+  interceptor-dashboard:
+    image: nginx:alpine
+    ports:
+      - 8090:80
+    volumes:
+      - mcp_logs:/var/log:ro
+      - ./interceptor-dashboard:/usr/share/nginx/html:ro
+    depends_on:
+      - mcp-gateway
 
 models:
   qwen3:
@@ -115,6 +139,7 @@ models:
 
 volumes:
   mongodb_data:
+  mcp_logs:  # Shared volume for interceptor logs
 
 configs:
   mcp_config:
