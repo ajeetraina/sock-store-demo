@@ -1,0 +1,17 @@
+# Ultra-lightweight configuration for systems with very limited resources
+# Uses TinyLlama 1.1B - only 700MB VRAM needed!
+
+services:
+  adk:
+    environment:
+      # Use the tiniest model available
+      - AI_DEFAULT_MODEL=local/tinyllama
+      - OPENAI_MODEL_NAME=tinyllama-1.1b
+
+models:
+  tinyllama:
+    # TinyLlama 1.1B - smallest model that still works well
+    model: ai/tinyllama:1.1b-chat-v1.0-q4_0
+    # Download size: ~700MB
+    # VRAM needed: ~700MB
+    # Works on: Almost any system with basic GPU or even CPU
