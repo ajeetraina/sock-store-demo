@@ -4,16 +4,17 @@
 services:
   adk:
     environment:
-      # Override to use local model instead of OpenAI
-      - AI_DEFAULT_MODEL=local/phi3:mini
-      - OPENAI_MODEL_NAME=phi3:mini
+      # Configure for Docker Model Runner with Phi3-mini
+      - AI_DEFAULT_MODEL=phi3-mini
+      - OPENAI_BASE_URL=http://host.docker.internal:12434/v1
+      - OPENAI_MODEL_NAME=ai/phi3:mini-4k-instruct-q4_0
     models:
-      phi3:
-        endpoint_var: MODEL_RUNNER_URL
-        model_var: MODEL_RUNNER_MODEL
+      phi3-mini:
+        endpoint_var: OPENAI_BASE_URL
+        model_var: OPENAI_MODEL_NAME
 
 models:
-  phi3:
+  phi3-mini:
     # Use smaller model that fits in most systems (3.8B parameters)
     model: ai/phi3:mini-4k-instruct-q4_0
     # Much smaller than Qwen3:14B - only requires ~2GB VRAM
