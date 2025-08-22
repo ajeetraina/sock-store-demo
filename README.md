@@ -1,7 +1,8 @@
-# 🧠 ADK Multi-Agent Fact Checker
+# 🧠 ADK Multi-Agent Fact Checker Demo with Sock Store
 
-> [!Tip]
-> ✨ No configuration needed — run it with a single command.
+This is an extension to [Docker Sock Store](https://github.com/docker/compose-for-agents/blob/main/adk-sock-shop/) demo
+
+
 
 # 🚀 Getting Started
 
