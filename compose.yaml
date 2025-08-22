@@ -77,8 +77,7 @@ services:
       - MCPGATEWAY_ENDPOINT=http://mcp-gateway:8811/sse
       - CATALOGUE_URL=http://catalogue:8081
       - OPENAI_BASE_URL=https://api.openai.com/v1
-      - AI_DEFAULT_MODEL=openai/gpt-4o
-      # - OPENAI_MODEL_NAME=gpt4
+      - AI_DEFAULT_MODEL=openai/gpt-4o-mini
     depends_on:
       - mcp-gateway
     secrets:
@@ -111,7 +110,7 @@ models:
   gemma_model:
     # pre-pull the model when starting Docker Model Runner
     model: ai/gemma3n
-    # context_size: 131000  # 35.5 GB VRAM
+ 
 
 volumes:
   mongodb_data:
